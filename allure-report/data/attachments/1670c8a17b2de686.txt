@@ -1,0 +1,1 @@
+HTTPSConnectionPool(host='qa-scooter.praktikum-services.ru', port=443): Max retries exceeded with url: /api/v1/courier/login (Caused by SSLError(SSLEOFError(8, 'EOF occurred in violation of protocol (_ssl.c:1129)')))

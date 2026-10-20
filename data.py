@@ -1,0 +1,25 @@
+
+# Курьер: создание
+COURIER_CREATE_SUCCESS_STATUS = 201
+COURIER_CREATE_DUPLICATE_STATUS = 409
+COURIER_CREATE_DUPLICATE_MSG = "Этот логин уже используется. Попробуйте другой."
+COURIER_CREATE_BAD_REQUEST_STATUS = 400
+COURIER_CREATE_MISSING_DATA_MSG = "Недостаточно данных для создания учетной записи"
+
+# Курьер: логин
+COURIER_LOGIN_SUCCESS_STATUS = 200
+COURIER_LOGIN_BAD_REQUEST_STATUS = 400
+COURIER_LOGIN_MISSING_DATA_MSG = "Недостаточно данных для входа"
+COURIER_LOGIN_NOT_FOUND_STATUS = 404
+COURIER_LOGIN_NOT_FOUND_MSG = "Учетная запись не найдена"
+
+# Заказы: цвета
+COLOR_BLACK = "BLACK"
+COLOR_GREY = "GREY"
+
+# Заказы: создание
+ORDER_CREATE_SUCCESS_STATUS = 201
+
+# Заказы: список
+ORDERS_LIST_SUCCESS_STATUS = 200
+ORDERS_LIST_FIELDS = {"orders", "pageInfo"}
