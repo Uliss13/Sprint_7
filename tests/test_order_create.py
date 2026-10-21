@@ -1,8 +1,7 @@
 import pytest
-import requests
 import allure
 import data
-from urls import ORDERS_URL
+from api_client import create_order
 
 
 @allure.feature("Заказы")
@@ -16,26 +15,18 @@ class TestOrderCreate:
         [data.COLOR_BLACK, data.COLOR_GREY],
         []
     ])
-    def test_create_order(self, color):
+    def test_create_order(self, cleanup_order, color):
         with allure.step(f"Создание заказа с параметрами цвета: {color}"):
-            payload = {
-                "firstName": "Test",
-                "lastName": "Test",
-                "address": "Moscow",
-                "metroStation": 4,
-                "phone": "+79990000000",
-                "rentTime": 5,
-                "deliveryDate": "2026-10-20",
-                "comment": "Test comment",
-                "color": color
-            }
-            response = requests.post(ORDERS_URL, json=payload)
+            # Копируем базовый payload и добавляем цвет, чтобы не менять оригинал в data.py
+            payload = data.ORDER_PAYLOAD.copy()
+            payload["color"] = color
+            
+            response = create_order(payload)
 
         with allure.step("Проверка успешного создания и наличия track"):
-            allure.attach(
-                response.text,
-                name="Ответ сервера",
-                attachment_type=allure.attachment_type.JSON
-            )
             assert response.status_code == data.ORDER_CREATE_SUCCESS_STATUS
-            assert "track" in response.json()
+            body = response.json()
+            assert "track" in body
+            
+            # Регистрируем трек для отмены (очистка)
+            cleanup_order(body["track"])

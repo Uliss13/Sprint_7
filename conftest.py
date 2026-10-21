@@ -1,41 +1,76 @@
 import pytest
 import requests
 import allure
-import json
-from urls import COURIER_URL, LOGIN_COURIER_URL
-from helpers import register_new_courier_and_return_login_password
+from api_client import (
+    create_courier,
+    login_courier,
+    delete_courier,
+    cancel_order,
+)
+from helpers import generate_courier_payload
 
 
 @pytest.fixture
 def courier():
+    """Создаёт курьера перед тестом и удаляет после."""
     with allure.step("Подготовка: создание курьера"):
-        courier_data = register_new_courier_and_return_login_password()
+        payload = generate_courier_payload()
+        response = create_courier(payload)
+        
+        if response.status_code != 201:
+            pytest.skip(f"Не удалось создать курьера. Статус: {response.status_code}")
 
-        if not courier_data:
-            pytest.skip("Не удалось создать курьера для теста")
-
-        login, password = courier_data[0], courier_data[1]
-        allure.attach(
-            json.dumps({"login": login, "password": password}, indent=2),
-            name="Данные созданного курьера",
-            attachment_type=allure.attachment_type.JSON
-        )
-
-    yield {"login": login, "password": password}
+    yield payload
 
     with allure.step("Очистка: удаление курьера"):
         try:
-            login_resp = requests.post(LOGIN_COURIER_URL, json={"login": login, "password": password}, timeout=5)
+            login_resp = login_courier({
+                "login": payload["login"],
+                "password": payload["password"]
+            })
             if login_resp.status_code == 200:
                 courier_id = login_resp.json().get("id")
                 if courier_id:
-                    delete_resp = requests.delete(f"{COURIER_URL}/{courier_id}", timeout=5)
-                    allure.attach(
-                                f"Удалён курьер ID={courier_id}, статус={delete_resp.status_code}",
-                                name="Результат удаления",
-                                attachment_type=allure.attachment_type.TEXT
-                    )
-        except requests.exceptions.RequestException as e:
-            # Если сервер упал во время очистки — логируем это в отчёт, не роняя тест
-            allure.attach(str(e), name="Ошибка при очистке", attachment_type=allure.attachment_type.TEXT)
-                
+                    delete_courier(courier_id)
+        except requests.exceptions.RequestException:
+            pass
+
+
+@pytest.fixture
+def cleanup_courier():
+    """Собирает логины/пароли созданных в тесте курьеров и удаляет их после."""
+    created = []
+
+    def _add(login, password):
+        created.append((login, password))
+
+    yield _add
+
+    with allure.step("Очистка: удаление созданных курьеров"):
+        for login, password in created:
+            try:
+                resp = login_courier({"login": login, "password": password})
+                if resp.status_code == 200:
+                    cid = resp.json().get("id")
+                    if cid:
+                        delete_courier(cid)
+            except requests.exceptions.RequestException:
+                pass
+
+
+@pytest.fixture
+def cleanup_order():
+    """Собирает треки созданных в тесте заказов и отменяет их после."""
+    tracks = []
+
+    def _add(track):
+        tracks.append(track)
+
+    yield _add
+
+    with allure.step("Очистка: отмена созданных заказов"):
+        for track in tracks:
+            try:
+                cancel_order(track)
+            except requests.exceptions.RequestException:
+                pass

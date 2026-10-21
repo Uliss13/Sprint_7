@@ -1,10 +1,10 @@
 import pytest
-import requests
 import allure
-import json
+import requests
 import data
 from urls import COURIER_URL
-from helpers import register_new_courier_and_return_login_password
+from helpers import generate_courier_payload
+from api_client import create_courier
 
 
 @allure.feature("Курьеры")
@@ -12,61 +12,44 @@ from helpers import register_new_courier_and_return_login_password
 class TestCourierCreate:
 
     @allure.title("Успешное создание курьера")
-    def test_create_courier_success(self):
-        with allure.step("Создание нового курьера через хелпер"):
-            courier_data = register_new_courier_and_return_login_password()
-            allure.attach(
-                json.dumps(courier_data, indent=2),
-                name="Данные созданного курьера",
-                attachment_type=allure.attachment_type.JSON
-            )
+    def test_create_courier_success(self, cleanup_courier):
+        with allure.step("Формирование данных и запрос на создание"):
+            payload = generate_courier_payload()
+            response = create_courier(payload)
+            
+            # Регистрируем для очистки, если создался
+            if response.status_code == 201:
+                cleanup_courier(payload["login"], payload["password"])
 
-        with allure.step("Проверка, что курьер создан"):
-            assert len(courier_data) == 3, "Курьер не создан (вернулся пустой список)"
+        with allure.step("Проверка кода и тела ответа"):
+            assert response.status_code == data.COURIER_CREATE_SUCCESS_STATUS
+            assert response.json() == {"ok": True}
 
-    @allure.title("Ошибка при создании дубликата курьера")
-    def test_create_courier_duplicate(self):
+    @allure.title("Ошибка при создании дубликата курьера (полное совпадение)")
+    def test_create_courier_duplicate(self, cleanup_courier):
         with allure.step("Создание первого курьера"):
-            courier_data = register_new_courier_and_return_login_password()
-            login, password = courier_data[0], courier_data[1]
+            payload = generate_courier_payload()
+            response_1 = create_courier(payload)
+            assert response_1.status_code == 201
+            cleanup_courier(payload["login"], payload["password"])
 
-        with allure.step("Попытка создать курьера с тем же логином"):
-            payload = {"login": login, "password": password}
-            response = requests.post(COURIER_URL, json=payload)
+        with allure.step("Попытка создать точно такого же курьера"):
+            response_2 = create_courier(payload)
 
-        with allure.step("Проверка кода и сообщения об ошибке"):
-            allure.attach(
-                response.text,
-                name="Ответ сервера",
-                attachment_type=allure.attachment_type.JSON
-            )
-            assert response.status_code == data.COURIER_CREATE_DUPLICATE_STATUS
-            assert response.json()["message"] == data.COURIER_CREATE_DUPLICATE_MSG
+        with allure.step("Проверка кода и текста ошибки"):
+            assert response_2.status_code == data.COURIER_CREATE_DUPLICATE_STATUS
+            assert response_2.json()["message"] == data.COURIER_CREATE_DUPLICATE_MSG
 
     @allure.title("Ошибка при создании курьера без обязательного поля: {missing_field}")
     @pytest.mark.parametrize("missing_field", ["login", "password"])
     def test_create_courier_missing_field(self, missing_field):
         with allure.step(f"Формирование payload без поля '{missing_field}'"):
-            payload = {
-                "login": "test_login_123",
-                "password": "test_password_123",
-                "firstName": "Test"
-            }
+            payload = generate_courier_payload()
             payload.pop(missing_field)
-            allure.attach(
-                json.dumps(payload, indent=2),
-                name="Отправленный payload",
-                attachment_type=allure.attachment_type.JSON
-            )
 
-        with allure.step("Отправка запроса на создание курьера"):
-            response = requests.post(COURIER_URL, json=payload)
+        with allure.step("Отправка запроса"):
+            response = create_courier(payload)
 
-        with allure.step("Проверка кода и сообщения об ошибке"):
-            allure.attach(
-                response.text,
-                name="Ответ сервера",
-                attachment_type=allure.attachment_type.JSON
-            )
+        with allure.step("Проверка кода и сообщения"):
             assert response.status_code == data.COURIER_CREATE_BAD_REQUEST_STATUS
             assert response.json()["message"] == data.COURIER_CREATE_MISSING_DATA_MSG
