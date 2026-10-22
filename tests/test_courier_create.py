@@ -1,8 +1,6 @@
 import pytest
 import allure
-import requests
 import data
-from urls import COURIER_URL
 from helpers import generate_courier_payload
 from api_client import create_courier
 
@@ -17,9 +15,7 @@ class TestCourierCreate:
             payload = generate_courier_payload()
             response = create_courier(payload)
             
-            # Регистрируем для очистки, если создался
-            if response.status_code == 201:
-                cleanup_courier(payload["login"], payload["password"])
+            cleanup_courier(payload["login"], payload["password"])
 
         with allure.step("Проверка кода и тела ответа"):
             assert response.status_code == data.COURIER_CREATE_SUCCESS_STATUS
