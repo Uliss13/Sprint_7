@@ -14,7 +14,7 @@ COURIER_LOGIN_NOT_FOUND_STATUS = 404
 COURIER_LOGIN_NOT_FOUND_MSG = "Учетная запись не найдена"
 # Курьер: логин (дополнения)
 COURIER_LOGIN_MISSING_PASSWORD_STATUS = 504  # Фактический ответ сервиса (известная недоработка)
-
+COURIER_LOGIN_MISSING_PASSWORD_TEXT = "Service unavailable"
 
 # Данные несуществующего курьера для теста логина
 NONEXISTENT_COURIER = {

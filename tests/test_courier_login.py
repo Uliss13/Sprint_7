@@ -36,10 +36,10 @@ class TestCourierLogin:
         with allure.step("Отправка запроса"):
             response = login_courier(bad_data)
 
-        with allure.step("Проверка фактического ответа сервера (504, без тела)"):
-            # Фактический ответ сервиса — 504 Gateway Timeout (тело отсутствует)
+        with allure.step("Проверка фактического ответа сервера (504, текст ошибки)"):
             assert response.status_code == data.COURIER_LOGIN_MISSING_PASSWORD_STATUS
-
+            assert response.text == data.COURIER_LOGIN_MISSING_PASSWORD_TEXT
+            
     @allure.title("Ошибка при неверном логине")
     def test_login_wrong_login(self, courier):
         with allure.step("Формирование payload с неверным логином"):
